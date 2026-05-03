@@ -1,0 +1,19 @@
+{
+  "name": "traffic-ghost-catcher",
+  "private": true,
+  "workspaces": ["packages/*", "server", "client"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm -w server run dev",
+    "dev:client": "npm -w client run dev",
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "build:shared": "npm -w shared run build",
+    "build:server": "npm -w server run build",
+    "build:client": "npm -w client run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  }
+}

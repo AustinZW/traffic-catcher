@@ -1,0 +1,209 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  email          String?  @unique
+  passwordHash   String
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gamePlayers    GamePlayer[]
+  sentMessages   ChatMessage[]    @relation("sender")
+  createdTasks   Task[]           @relation("taskCreator")
+  reviewedTasks  TaskSubmission[] @relation("reviewer")
+  stats          Stats?
+}
+
+model Stats {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  gamesPlayed     Int     @default(0)
+  gamesWon        Int     @default(0)
+  totalPoints     Int     @default(0)
+  catchesAsGhost  Int     @default(0)
+  tasksCompleted  Int     @default(0)
+  winRate         Float   @default(0)
+
+  user            User    @relation(fields: [userId], references: [id])
+}
+
+model Game {
+  id                       String    @id @default(cuid())
+  code                     String    @unique
+  name                     String    @default("")
+  phase                    String    @default("lobby") // lobby | waiting | countdown | playing | finished | cancelled
+  maxPlayers               Int       @default(10)
+  teamAssignment           String    @default("system") // manual | referee | system
+  crossTeamVisibilityMin   Int       @default(30)       // minutes until cross-team location visible
+  zoneLat                  Float?
+  zoneLng                  Float?
+  zoneRadiusKm             Float     @default(5.0)
+  durationMin              Int       @default(45)
+  createdAt                DateTime  @default(now())
+  startedAt                DateTime?
+  endedAt                  DateTime?
+  updatedAt                DateTime  @updatedAt
+
+  players                  GamePlayer[]
+  teams                    Team[]
+  tasks                    Task[]
+  messages                 ChatMessage[]
+  itemUsages               ItemUsage[]
+}
+
+model Team {
+  id      String @id @default(cuid())
+  gameId  String
+  name    String // "ghost" | "human"
+  score   Int    @default(0)
+  color   String @default("") // hex color for UI
+
+  game    Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  players GamePlayer[]
+
+  @@index([gameId])
+}
+
+model GamePlayer {
+  id               String    @id @default(cuid())
+  gameId           String
+  userId           String
+  teamId           String?
+  role             String    @default("human") // ghost | human | referee
+  score            Int       @default(0)
+  isReady          Boolean   @default(false)
+  isCaught         Boolean   @default(false)
+  isRevived        Boolean   @default(false)    // revived once per player
+  caughtAt         DateTime?
+  caughtById       String?
+  encryptedLat     String?
+  encryptedLng     String?
+  locationUpdatedAt DateTime?
+  joinedAt         DateTime  @default(now())
+  leftAt           DateTime?
+
+  game             Game            @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id])
+  team             Team?           @relation(fields: [teamId], references: [id])
+  submissions      TaskSubmission[]
+  purchasedItems   PlayerItem[]
+
+  @@index([gameId])
+  @@index([userId])
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  gameId         String
+  creatorId      String
+  title          String
+  description    String?
+  conditionText  String?              // completion condition description
+  points         Int      @default(10)
+  allowedTeams   String   @default("human,ghost") // comma-separated
+  requireText    Boolean  @default(false)
+  requirePhoto   Boolean  @default(false)
+  requireLocation Boolean @default(false)
+  targetLat      Float?
+  targetLng      Float?
+  arriveRadiusM  Int      @default(100)
+  timeLimitSec   Int?
+  orderIndex     Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  game           Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  creator        User             @relation("taskCreator", fields: [creatorId], references: [id])
+  submissions    TaskSubmission[]
+
+  @@index([gameId])
+}
+
+model TaskSubmission {
+  id            String    @id @default(cuid())
+  taskId        String
+  playerId      String
+  textContent   String?              // text answer
+  photoUrl      String?              // uploaded photo URL
+  locationLat   Float?               // location at submission
+  locationLng   Float?
+  status        String    @default("pending") // pending | approved | rejected
+  pointsAwarded Int       @default(0)
+  reviewerId    String?              // referee who reviewed
+  reviewNote    String?              // referee feedback
+  submittedAt   DateTime  @default(now())
+  reviewedAt    DateTime?
+
+  task          Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  player        GamePlayer   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  reviewer      User?        @relation("reviewer", fields: [reviewerId], references: [id])
+
+  @@index([taskId])
+  @@index([playerId])
+}
+
+model ShopItem {
+  id            String @id @default(cuid())
+  name          String
+  description   String
+  team          String // ghost | human | both
+  price         Int
+  type          String // pause | invisibility | invincibility | revive | trap | tracking
+  cooldownMin   Int    @default(60)  // minutes between uses (team-wide or player-wide)
+  broadcasts    String @default("none") // none | onAcquire | onUse | both
+
+  playerItems   PlayerItem[]
+
+  @@index([type])
+}
+
+model PlayerItem {
+  id          String    @id @default(cuid())
+  playerId    String
+  itemId      String
+  quantity    Int       @default(1)
+  usedAt      DateTime?
+  acquiredAt  DateTime  @default(now())
+
+  player      GamePlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  item        ShopItem   @relation(fields: [itemId], references: [id])
+
+  @@index([playerId])
+}
+
+model ItemUsage {
+  id            String   @id @default(cuid())
+  gameId        String
+  userId        String
+  itemId        String
+  usedAt        DateTime @default(now())
+  effectEndsAt  DateTime?
+
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id            String   @id @default(cuid())
+  gameId        String
+  senderId      String
+  recipientId   String?
+  recipientRole String?
+  content       String
+  type          String   @default("chat") // chat | broadcast | system | catch | item
+  createdAt     DateTime @default(now())
+
+  game          Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  sender        User @relation("sender", fields: [senderId], references: [id])
+
+  @@index([gameId])
+}

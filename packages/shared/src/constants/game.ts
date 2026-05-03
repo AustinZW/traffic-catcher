@@ -1,0 +1,9 @@
+export const MAX_PLAYERS = 10;
+export const MIN_PLAYERS = 2;
+export const CATCH_RADIUS_M = 100;
+export const DEFAULT_DURATION_MIN = 45;
+export const DEFAULT_ZONE_RADIUS_KM = 5;
+export const COUNTDOWN_SECONDS = 5;
+export const LOCATION_UPDATE_INTERVAL_MS = 2000;
+export const DISCONNECT_GRACE_PERIOD_MS = 60000;
+export const DEFAULT_CENTER = { lat: 39.6305, lng: 118.1802 }; // 唐山

@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.drawer {
+  @apply fixed bottom-0 left-0 right-0 z-40 rounded-t-2xl bg-white shadow-2xl
+         max-h-[70vh] overflow-y-auto transition-transform duration-300;
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.btn-touch {
+  @apply min-h-[44px] min-w-[44px] active:scale-95 transition-transform;
+}
